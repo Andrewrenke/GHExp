@@ -5,22 +5,25 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {QueryProvider} from '@/app/providers/QueryProvider';
 import {RootNavigator} from '@/app/navigation/RootNavigator';
 import {ThemeProvider} from '@/shared/theme/ThemeProvider';
+import {ErrorBoundary} from '@/shared/ui/ErrorBoundary';
 
 // GestureHandlerRootView sits above navigation so swipe-back gestures
-// work; SafeAreaProvider wraps navigation so headers get correct
-// insets; ThemeProvider wraps navigation so screen chrome (headers,
-// container background) picks up theme changes without a remount.
+// work; ErrorBoundary is next-outermost so it can catch renders in
+// any provider below it; ThemeProvider wraps navigation so headers
+// pick up theme changes without a remount.
 export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <StatusBar style="auto" />
-          <QueryProvider>
-            <RootNavigator />
-          </QueryProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <StatusBar style="auto" />
+            <QueryProvider>
+              <RootNavigator />
+            </QueryProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }
