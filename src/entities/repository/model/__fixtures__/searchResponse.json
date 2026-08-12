@@ -1,0 +1,48 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "id": 29028775,
+      "node_id": "MDEwOlJlcG9zaXRvcnkyOTAyODc3NQ==",
+      "name": "react-native",
+      "full_name": "facebook/react-native",
+      "private": false,
+      "owner": {
+        "login": "facebook",
+        "id": 69631,
+        "avatar_url": "https://avatars.githubusercontent.com/u/69631?v=4",
+        "html_url": "https://github.com/facebook",
+        "type": "Organization"
+      },
+      "html_url": "https://github.com/facebook/react-native",
+      "description": "A framework for building native applications using React",
+      "fork": false,
+      "stargazers_count": 121000,
+      "watchers_count": 121000,
+      "language": "C++",
+      "forks_count": 24000,
+      "open_issues_count": 800,
+      "updated_at": "2026-08-10T12:34:56Z",
+      "pushed_at": "2026-08-10T12:34:56Z",
+      "score": 1.0
+    },
+    {
+      "id": 1,
+      "name": "empty-repo",
+      "full_name": "someone/empty-repo",
+      "owner": {
+        "login": "someone",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4",
+        "html_url": "https://github.com/someone"
+      },
+      "html_url": "https://github.com/someone/empty-repo",
+      "description": null,
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "open_issues_count": 0,
+      "language": null,
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
