@@ -3,7 +3,7 @@ import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import {FlashList, type ListRenderItem} from '@shopify/flash-list';
 import type {Repository} from '@/entities/repository/model/schema';
 import {RepositoryCard} from '@/entities/repository/ui/RepositoryCard';
-import {colors} from '@/shared/theme/colors';
+import {useTheme} from '@/shared/theme/ThemeProvider';
 
 type Props = {
   data: readonly Repository[];
@@ -12,12 +12,10 @@ type Props = {
   isFetchingNextPage: boolean;
 };
 
-// keyExtractor and renderItem are hoisted out of the component so
-// FlashList doesn't get a fresh function reference on every parent
-// re-render (which defeats memoization of the row).
 const keyExtractor = (item: Repository) => String(item.id);
 
 export function SearchResultsList({data, onPressItem, onEndReached, isFetchingNextPage}: Props) {
+  const {colors} = useTheme();
   const renderItem = React.useCallback<ListRenderItem<Repository>>(
     ({item}) => <RepositoryCard item={item} onPress={onPressItem} />,
     [onPressItem],
@@ -26,11 +24,11 @@ export function SearchResultsList({data, onPressItem, onEndReached, isFetchingNe
   const ListFooter = React.useMemo(
     () =>
       isFetchingNextPage ? (
-        <View style={styles.footer}>
+        <View style={[styles.footer, {backgroundColor: colors.background}]}>
           <ActivityIndicator />
         </View>
       ) : null,
-    [isFetchingNextPage],
+    [isFetchingNextPage, colors.background],
   );
 
   return (
@@ -47,9 +45,5 @@ export function SearchResultsList({data, onPressItem, onEndReached, isFetchingNe
 }
 
 const styles = StyleSheet.create({
-  footer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
+  footer: {paddingVertical: 20, alignItems: 'center'},
 });

@@ -4,18 +4,22 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {QueryProvider} from '@/app/providers/QueryProvider';
 import {RootNavigator} from '@/app/navigation/RootNavigator';
+import {ThemeProvider} from '@/shared/theme/ThemeProvider';
 
-// GestureHandlerRootView must sit above react-navigation so swipe-back
-// gestures work; SafeAreaProvider must wrap the navigator so screen
-// headers get correct insets on notched devices.
+// GestureHandlerRootView sits above navigation so swipe-back gestures
+// work; SafeAreaProvider wraps navigation so headers get correct
+// insets; ThemeProvider wraps navigation so screen chrome (headers,
+// container background) picks up theme changes without a remount.
 export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <StatusBar style="auto" />
-        <QueryProvider>
-          <RootNavigator />
-        </QueryProvider>
+        <ThemeProvider>
+          <StatusBar style="auto" />
+          <QueryProvider>
+            <RootNavigator />
+          </QueryProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

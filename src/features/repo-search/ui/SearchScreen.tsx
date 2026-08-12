@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -9,10 +9,12 @@ import {useRepositorySearch} from '@/features/repo-search/api/useRepositorySearc
 import {useDebouncedValue} from '@/shared/lib/useDebouncedValue';
 import {EmptyState} from '@/shared/ui/EmptyState';
 import {ErrorState} from '@/shared/ui/ErrorState';
+import {OfflineBanner} from '@/shared/ui/OfflineBanner';
 import {RepositoryCardSkeleton} from '@/shared/ui/Skeleton';
 import type {RootStackParamList} from '@/app/navigation/types';
 import type {Repository} from '@/entities/repository/model/schema';
-import {colors} from '@/shared/theme/colors';
+import {useTheme} from '@/shared/theme/ThemeProvider';
+import {useSearchHistoryStore} from '@/shared/store/useSearchHistoryStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
@@ -22,8 +24,18 @@ export function SearchScreen() {
   // burn the rate limit on every keystroke" window.
   const debouncedQuery = useDebouncedValue(query, 350);
   const navigation = useNavigation<Nav>();
+  const {colors} = useTheme();
+  const pushHistory = useSearchHistoryStore(s => s.push);
 
   const search = useRepositorySearch(debouncedQuery);
+
+  // Persist a term to history only once its results actually resolve
+  // — that way typos and half-typed searches don't pollute the list.
+  useEffect(() => {
+    if (search.isSuccess && debouncedQuery) {
+      pushHistory(debouncedQuery);
+    }
+  }, [search.isSuccess, debouncedQuery, pushHistory]);
 
   const items = useMemo(
     () => search.data?.pages.flatMap(p => p.items) ?? [],
@@ -32,10 +44,7 @@ export function SearchScreen() {
 
   const handlePressItem = useCallback(
     (item: Repository) => {
-      navigation.navigate('Detail', {
-        owner: item.owner.login,
-        name: item.name,
-      });
+      navigation.navigate('Detail', {owner: item.owner.login, name: item.name});
     },
     [navigation],
   );
@@ -47,7 +56,8 @@ export function SearchScreen() {
   }, [search]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, {backgroundColor: colors.background}]} edges={['top']}>
+      <OfflineBanner />
       <SearchInput value={query} onChangeText={setQuery} />
       <View style={styles.body}>{renderBody()}</View>
     </SafeAreaView>
@@ -102,6 +112,6 @@ export function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: colors.background},
+  container: {flex: 1},
   body: {flex: 1},
 });

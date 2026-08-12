@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {StyleSheet, TextInput, View} from 'react-native';
-import {colors} from '@/shared/theme/colors';
+import {useTheme} from '@/shared/theme/ThemeProvider';
+import type {Palette} from '@/shared/theme/palette';
 
 type Props = {
   value: string;
@@ -8,6 +9,8 @@ type Props = {
 };
 
 export const SearchInput = React.memo(function SearchInputImpl({value, onChangeText}: Props) {
+  const {colors} = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrapper}>
       <TextInput
@@ -25,19 +28,21 @@ export const SearchInput = React.memo(function SearchInputImpl({value, onChangeT
   );
 });
 
-const styles = StyleSheet.create({
-  wrapper: {
-    padding: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  input: {
-    height: 40,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-    fontSize: 15,
-    color: colors.text,
-  },
-});
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
+    wrapper: {
+      padding: 12,
+      backgroundColor: colors.background,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    input: {
+      height: 40,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      fontSize: 15,
+      color: colors.text,
+    },
+  });
+}

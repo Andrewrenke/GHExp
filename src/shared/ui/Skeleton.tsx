@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, View, type ViewStyle} from 'react-native';
-import {colors} from '@/shared/theme/colors';
+import {useTheme} from '@/shared/theme/ThemeProvider';
 
 type Props = {
   height: number;
@@ -9,11 +9,11 @@ type Props = {
   style?: ViewStyle;
 };
 
-// A single row of shimmering blocks that mimics the RepositoryCard
-// footprint. Skeletons > spinners on first paint because they hint
-// at layout, so the eventual content lands without a visible reflow.
+// Skeletons > spinners on first paint because they hint at layout;
+// the eventual content lands without a visible reflow.
 export const Skeleton = React.memo(function SkeletonImpl({height, width, radius = 4, style}: Props) {
   const opacity = useRef(new Animated.Value(0.4)).current;
+  const {colors} = useTheme();
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -29,8 +29,13 @@ export const Skeleton = React.memo(function SkeletonImpl({height, width, radius 
   return (
     <Animated.View
       style={[
-        {height, width: width ?? '100%', borderRadius: radius, opacity},
-        styles.block,
+        {
+          height,
+          width: width ?? '100%',
+          borderRadius: radius,
+          opacity,
+          backgroundColor: colors.skeleton,
+        },
         style,
       ]}
     />
@@ -51,19 +56,7 @@ export const RepositoryCardSkeleton = React.memo(function RepositoryCardSkeleton
 });
 
 const styles = StyleSheet.create({
-  block: {
-    backgroundColor: colors.skeleton,
-  },
-  row: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-  },
-  column: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  spacer: {
-    marginTop: 8,
-  },
+  row: {flexDirection: 'row', padding: 16, gap: 12},
+  column: {flex: 1, justifyContent: 'center'},
+  spacer: {marginTop: 8},
 });
