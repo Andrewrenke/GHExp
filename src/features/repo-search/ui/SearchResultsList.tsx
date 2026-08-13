@@ -39,7 +39,6 @@ export function SearchResultsList({data, onPressItem, onEndReached, isFetchingNe
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       ListFooterComponent={ListFooter}
-      removeClippedSubviews
     />
   );
 }

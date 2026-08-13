@@ -1,6 +1,7 @@
 import React, {useMemo} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Image} from 'expo-image';
+import Octicons from '@expo/vector-icons/Octicons';
 import type {Repository} from '@/entities/repository/model/schema';
 import {useTheme} from '@/shared/theme/ThemeProvider';
 import type {Palette} from '@/shared/theme/palette';
@@ -34,9 +35,16 @@ export const RepositoryCard = React.memo(function RepositoryCardImpl({item, onPr
       <Image
         source={{uri: item.owner.avatar_url}}
         style={styles.avatar}
+        // FlashList recycles cell views. Without a recyclingKey the Image keeps
+        // showing the *previous* row's avatar until the new one decodes, which
+        // reads as avatars visibly shuffling during a fast fling.
+        recyclingKey={item.full_name}
         cachePolicy="disk"
         contentFit="cover"
         transition={150}
+        // Avatars are decorative here — the row's own accessibilityLabel
+        // already announces the repository.
+        accessible={false}
       />
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>
@@ -48,7 +56,12 @@ export const RepositoryCard = React.memo(function RepositoryCardImpl({item, onPr
           </Text>
         ) : null}
         <View style={styles.metaRow}>
-          <Text style={styles.metaStar}>★ {formatCount(item.stargazers_count)}</Text>
+          <View style={styles.metaStarGroup}>
+            {/* Decorative: the count next to it already carries the meaning,
+                so the icon must not be announced separately. */}
+            <Octicons name="star-fill" size={12} color={colors.star} accessible={false} />
+            <Text style={styles.metaStar}>{formatCount(item.stargazers_count)}</Text>
+          </View>
           {item.language ? (
             <Text style={styles.meta} numberOfLines={1}>
               {item.language}
@@ -65,9 +78,12 @@ export const RepositoryCard = React.memo(function RepositoryCardImpl({item, onPr
         accessibilityRole="button"
         accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
         style={styles.favBtn}>
-        <Text style={[styles.favIcon, {color: isFavorite ? colors.star : colors.textMuted}]}>
-          {isFavorite ? '★' : '☆'}
-        </Text>
+        <Octicons
+          name={isFavorite ? 'star-fill' : 'star'}
+          size={20}
+          color={isFavorite ? colors.star : colors.textMuted}
+          accessible={false}
+        />
       </Pressable>
     </Pressable>
   );
@@ -90,9 +106,9 @@ function makeStyles(colors: Palette) {
     name: {fontSize: 15, fontWeight: '600', color: colors.accent},
     description: {marginTop: 4, fontSize: 13, color: colors.text, lineHeight: 18},
     metaRow: {marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap'},
+    metaStarGroup: {flexDirection: 'row', alignItems: 'center', gap: 4},
     meta: {fontSize: 12, color: colors.textMuted},
     metaStar: {fontSize: 12, color: colors.star, fontWeight: '600'},
     favBtn: {padding: 4},
-    favIcon: {fontSize: 22, lineHeight: 24},
   });
 }
