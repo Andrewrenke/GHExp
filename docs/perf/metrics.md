@@ -184,44 +184,55 @@ timing as a smoke test only.
 
 ---
 
-## 5. Known issue: the iOS device build ships without `React.framework`
+## 5. Fixed: the iOS device build shipped without `React.framework`
 
-`npx expo run:ios --device --configuration Release` **builds and installs
-successfully, then crashes on launch**:
+**Symptom.** `npx expo run:ios --device --configuration Release` built and
+installed successfully, then crashed on launch:
 
 ```
 dyld[789]: Library not loaded: @rpath/React.framework/React
   Reason: tried: '.../GitHubExplorer.app/Frameworks/React.framework/React' (no such file)
 ```
 
-Cause: RN 0.86 ships React core as a prebuilt XCFramework
+**Cause.** RN 0.86 ships React core as a prebuilt XCFramework
 (`Pods/React-Core-prebuilt/React.xcframework`). The `[CP] Copy XCFrameworks`
-phase does extract the `ios-arm64` slice into
-`Build/Products/Release-iphoneos/XCFrameworkIntermediates/React-Core-prebuilt/React.framework`
-— but CocoaPods' embed script,
-`Pods/Target Support Files/Pods-GitHubExplorer/Pods-GitHubExplorer-frameworks.sh`,
-never installs it into the app bundle. It lists `ReactNativeDependencies`,
-`hermesvm` and every Expo framework; `React.framework` appears in **neither the
-Debug nor the Release block**.
+phase extracted the `ios-arm64` slice into `XCFrameworkIntermediates/`, but
+CocoaPods' embed script
+(`Pods/Target Support Files/Pods-GitHubExplorer/Pods-GitHubExplorer-frameworks.sh`)
+never installed it into the app bundle. It listed `ReactNativeDependencies`,
+`hermesvm` and every Expo framework; `React.framework` appeared in **neither the
+Debug nor the Release block**. So the binary linked against a dynamic framework
+that was never shipped.
 
-Workaround used to verify the app on device (not durable — `pod install`
-regenerates the script):
-
-```bash
-APP=".../Release-iphoneos/GitHubExplorer.app"
-codesign -d --entitlements :- "$APP" > ent.plist
-cp -R ".../XCFrameworkIntermediates/React-Core-prebuilt/React.framework" "$APP/Frameworks/"
-codesign --force --sign "Apple Development: <you>" --timestamp=none "$APP/Frameworks/React.framework"
-codesign --force --sign "Apple Development: <you>" --entitlements ent.plist --timestamp=none "$APP"
-xcrun devicectl device install app --device <udid> "$APP"
-```
-
-The durable fix is to stop using the prebuilt core and compile React Native from
-source, via `expo-build-properties`:
+**Fix.** Stop using the prebuilt core and compile React Native from source, via
+`expo-build-properties` in `app.json`:
 
 ```json
 ["expo-build-properties", {"ios": {"buildReactNativeFromSource": true}}]
 ```
 
-That survives `expo prebuild` because it lives in `app.json`. It costs a much
-longer first build. **Not applied yet** — it needs its own verification pass.
+This lives in `app.json`, so it survives `expo prebuild` — unlike editing the
+generated CocoaPods script, which `pod install` regenerates.
+
+**Verified after the fix** (Release, iPhone 17 Pro simulator, built in Xcode):
+
+| Check                                       | Before                        | After                                                    |
+| ------------------------------------------- | ----------------------------- | -------------------------------------------------------- |
+| `React-Core-prebuilt` in `Podfile.lock`     | present                       | 0 references                                             |
+| React source                                | prebuilt XCFramework          | `React-Core (0.86.2) from ../node_modules/react-native/` |
+| `install_framework` entries in embed script | 27                            | 5                                                        |
+| `otool -L` → `@rpath/React.framework/React` | required, missing from bundle | **not referenced at all**                                |
+| Remaining `@rpath` deps                     | 13 frameworks, React absent   | `ExpoModulesJSI`, `hermesvm` — both present              |
+| Launch                                      | `dyld` crash                  | **runs**                                                 |
+
+React is now linked statically into the binary, so the missing-framework failure
+mode cannot occur. The app launched with no manual bundle surgery, rendered the
+search screen, and restored persisted MMKV state (recent searches) — which also
+confirms MMKV works on iOS.
+
+**Cost:** the first build compiles React Native from source and takes
+considerably longer than unpacking a prebuilt framework.
+
+**Still unverified:** the fix has not been run on a physical device. The iPhone
+used earlier for performance measurements has Developer Mode disabled, so the
+device build could not be produced after the change.

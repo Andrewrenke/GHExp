@@ -20,6 +20,16 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "plugins": ["expo-image"]
+    "plugins": [
+      "expo-image",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "buildReactNativeFromSource": true
+          }
+        }
+      ]
+    ]
   }
 }
