@@ -83,6 +83,10 @@ Requires Node ≥ 20 (the RN 0.86 codegen used by Expo SDK 57 asks for
 20.19+ / 22.13+ / 24.3+ — Node 22.9 works with warnings). Yarn or npm are
 both fine; this project ships a `package-lock.json`.
 
+Prefer not to build? Grab the prebuilt Android binary from the
+[APK release](https://github.com/Andrewrenke/GHExp/releases/tag/APK) and install
+it with `adb install GitHubExplorer-release.apk`.
+
 ```bash
 npm install --legacy-peer-deps
 npm run android       # build + install the dev build on an emulator/device
@@ -143,8 +147,10 @@ Run `npm run verify` (typecheck → lint → tests) for the whole gate in one co
 - ⚠️ **Android frame timing is emulator-bound** and should be disregarded:
   27–30 ms median frame, 18–24 % janky. The iPhone numbers above are the
   trustworthy ones — see "Performance" for why.
-- ⚠️ **No release APK attached to this repo.** It builds locally with
-  `cd android && ./gradlew assembleRelease` (89 MB universal APK, debug-signed).
+- ✅ **Release APK published:**
+  [download it from the APK release](https://github.com/Andrewrenke/GHExp/releases/download/APK/GitHubExplorer-release.apk)
+  (89 MB, universal, all four ABIs). **Debug-signed** — fine for sideloading,
+  not for distribution. Rebuild with `cd android && ./gradlew assembleRelease`.
 
 ---
 
