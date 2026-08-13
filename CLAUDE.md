@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # GitHubExplorer — agent instructions
 
 GitHub repository search app. Expo SDK 57, React Native 0.86.2, React 19.2.3,
@@ -27,8 +25,11 @@ undo by accident and expensive to rediscover.
    Change `app.json` and re-run `npx expo prebuild`. Note that prebuild _clears_
    the native directories even without `--clean`, and wipes
    `android/local.properties` (recreate with `sdk.dir=$HOME/Library/Android/sdk`).
-5. **Read the SDK 57 docs before writing Expo code** — see AGENTS.md. Do not
-   trust training data for Expo/RN APIs; several here changed recently.
+5. **Read the versioned SDK 57 docs before writing Expo code:**
+   <https://docs.expo.dev/versions/v57.0.0/>. Do not trust training data for
+   Expo/RN APIs — several used here changed recently, and this session lost time
+   to exactly that (`react-native init` is removed, FlashList v2 dropped
+   `estimatedItemSize`, `removeClippedSubviews` became a no-op).
 
 ---
 
