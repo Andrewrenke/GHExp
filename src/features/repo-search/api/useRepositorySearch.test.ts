@@ -1,7 +1,4 @@
-import {
-  SEARCH_MAX_PAGES,
-  getNextSearchPage,
-} from './useRepositorySearch';
+import {SEARCH_MAX_PAGES, getNextSearchPage} from './useRepositorySearch';
 import type {SearchResponse} from '@/entities/repository/model/schema';
 
 function page(total = 100_000): SearchResponse {

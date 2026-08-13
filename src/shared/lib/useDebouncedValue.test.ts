@@ -5,18 +5,18 @@ jest.useFakeTimers();
 
 describe('useDebouncedValue', () => {
   it('returns the initial value immediately', async () => {
-    const {result} = await renderHook(() => useDebouncedValue('a', 300));
+    const {result} = renderHook(() => useDebouncedValue('a', 300));
     expect(result.current).toBe('a');
   });
 
   it('updates only after the delay elapses', async () => {
-    const {result, rerender} = await renderHook(
+    const {result, rerender} = renderHook(
       ({value}: {value: string}) => useDebouncedValue(value, 300),
       {initialProps: {value: 'a'}},
     );
 
     await act(async () => {
-      await rerender({value: 'b'});
+      rerender({value: 'b'});
     });
     expect(result.current).toBe('a');
 
@@ -32,17 +32,17 @@ describe('useDebouncedValue', () => {
   });
 
   it('collapses rapid changes into the last value (the whole point of debouncing search input)', async () => {
-    const {result, rerender} = await renderHook(
+    const {result, rerender} = renderHook(
       ({value}: {value: string}) => useDebouncedValue(value, 300),
       {initialProps: {value: 'r'}},
     );
 
     await act(async () => {
-      await rerender({value: 're'});
+      rerender({value: 're'});
       jest.advanceTimersByTime(100);
-      await rerender({value: 'rea'});
+      rerender({value: 'rea'});
       jest.advanceTimersByTime(100);
-      await rerender({value: 'reac'});
+      rerender({value: 'reac'});
       jest.advanceTimersByTime(100);
     });
     // every keystroke reset the timer — still initial
