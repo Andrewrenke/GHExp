@@ -1,11 +1,5 @@
 import {z} from 'zod';
-import {
-  ApiError,
-  NetworkError,
-  RateLimitError,
-  SchemaError,
-  TimeoutError,
-} from './errors';
+import {ApiError, NetworkError, RateLimitError, SchemaError, TimeoutError} from './errors';
 import {API_BASE_URL, DEFAULT_TIMEOUT_MS, GITHUB_TOKEN} from './config';
 
 type RequestOptions = {
@@ -113,10 +107,7 @@ export async function requestJson<T>(
   const json = await request(path, opts);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    throw new SchemaError(
-      `Response failed schema validation for ${path}`,
-      parsed.error,
-    );
+    throw new SchemaError(`Response failed schema validation for ${path}`, parsed.error);
   }
   return parsed.data;
 }
