@@ -141,9 +141,11 @@ Run `npm run verify` (typecheck → lint → tests) for the whole gate in one co
 - ✅ **iOS packaging bug found and fixed** — the device build shipped without
   `React.framework` and crashed at launch. React Native is now compiled from
   source; `otool -L` confirms the dependency is gone entirely.
-- ⚠️ **The iOS fix is verified on the simulator, not on a device.** The iPhone
-  used for the measurements has Developer Mode disabled, so a device build
-  could not be produced after the change.
+- ✅ **The iOS fix is verified on a physical device** — Release build on an
+  iPhone 15 Pro (iOS 18.7.8). `otool -L` confirms the binary no longer
+  references `@rpath/React.framework`; the only remaining `@rpath` dependencies
+  (`ExpoModulesJSI`, `hermesvm`) are both present in the bundle. The app
+  launches and stays running with no manual bundle surgery.
 - ⚠️ **Android frame timing is emulator-bound** and should be disregarded:
   27–30 ms median frame, 18–24 % janky. The iPhone numbers above are the
   trustworthy ones — see "Performance" for why.
@@ -531,8 +533,6 @@ The optimizations already in the code:
   allows.
 - **Building React Native from source makes the first iOS build slow.** That is
   the price of the `React.framework` fix — see `docs/perf/metrics.md` §5.
-- **The iOS fix is unverified on a physical device** (simulator only), because
-  Developer Mode was disabled on the available iPhone.
 - **Android frame timing could not be measured credibly.** The emulator was
   RAM-starved; the iPhone hitch numbers are the ones to trust.
 - **Expo Go no longer works** — MMKV is a native module, so a dev build is

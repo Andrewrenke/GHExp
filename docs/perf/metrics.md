@@ -233,6 +233,7 @@ confirms MMKV works on iOS.
 **Cost:** the first build compiles React Native from source and takes
 considerably longer than unpacking a prebuilt framework.
 
-**Still unverified:** the fix has not been run on a physical device. The iPhone
-used earlier for performance measurements has Developer Mode disabled, so the
-device build could not be produced after the change.
+**Verified on a physical device too** (iPhone 15 Pro, iOS 18.7.8, Release):
+`otool -L` shows no `@rpath/React.framework` reference, the two remaining
+`@rpath` dependencies are both embedded, and the app launches and keeps running
+without the manual framework copy that the prebuilt build required.
