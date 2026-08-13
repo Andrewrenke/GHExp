@@ -5,13 +5,15 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {SearchInput} from './SearchInput';
 import {SearchResultsList} from './SearchResultsList';
+import {RecentSearches} from './RecentSearches';
 import {useRepositorySearch} from '@/features/repo-search/api/useRepositorySearch';
+import {isRateLimitError, toUserMessage} from '@/shared/api/errors';
 import {useDebouncedValue} from '@/shared/lib/useDebouncedValue';
 import {EmptyState} from '@/shared/ui/EmptyState';
 import {ErrorState} from '@/shared/ui/ErrorState';
 import {OfflineBanner} from '@/shared/ui/OfflineBanner';
 import {RepositoryCardSkeleton} from '@/shared/ui/Skeleton';
-import type {RootStackParamList} from '@/app/navigation/types';
+import type {RootStackParamList} from '@/shared/navigation/types';
 import type {Repository} from '@/entities/repository/model/schema';
 import {useTheme} from '@/shared/theme/ThemeProvider';
 import {useSearchHistoryStore} from '@/shared/store/useSearchHistoryStore';
@@ -26,6 +28,7 @@ export function SearchScreen() {
   const navigation = useNavigation<Nav>();
   const {colors} = useTheme();
   const pushHistory = useSearchHistoryStore(s => s.push);
+  const history = useSearchHistoryStore(s => s.history);
 
   const search = useRepositorySearch(debouncedQuery);
 
@@ -37,10 +40,7 @@ export function SearchScreen() {
     }
   }, [search.isSuccess, debouncedQuery, pushHistory]);
 
-  const items = useMemo(
-    () => search.data?.pages.flatMap(p => p.items) ?? [],
-    [search.data],
-  );
+  const items = useMemo(() => search.data?.pages.flatMap(p => p.items) ?? [], [search.data]);
 
   const handlePressItem = useCallback(
     (item: Repository) => {
@@ -49,14 +49,31 @@ export function SearchScreen() {
     [navigation],
   );
 
-  const handleEndReached = useCallback(() => {
-    if (search.hasNextPage && !search.isFetchingNextPage) {
-      search.fetchNextPage();
-    }
-  }, [search]);
+  // Depend on the three fields actually read, not the whole `search` object —
+  // that object gets a new identity on every render, so a `[search]` dependency
+  // handed FlashList a brand-new onEndReached on every single render.
+  const {hasNextPage, isFetchingNextPage, fetchNextPage, refetch} = search;
 
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Stable identity so the memoized ErrorState isn't re-rendered by a fresh
+  // inline arrow on every parent render.
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  // Edges must be listed explicitly. Omitting the prop entirely does not mean
+  // "no insets" — it means *all* of them, which re-applied the status-bar inset
+  // underneath the navigator's header and left a visible dead gap above the
+  // search field.
   return (
-    <SafeAreaView style={[styles.container, {backgroundColor: colors.background}]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, {backgroundColor: colors.background}]}
+      edges={['left', 'right', 'bottom']}>
       <OfflineBanner />
       <SearchInput value={query} onChangeText={setQuery} />
       <View style={styles.body}>{renderBody()}</View>
@@ -65,7 +82,11 @@ export function SearchScreen() {
 
   function renderBody() {
     if (debouncedQuery.length === 0) {
-      return (
+      // Recent searches are more useful than a static hint once the user has
+      // any history; fall back to the hint on a first run.
+      return history.length > 0 ? (
+        <RecentSearches onSelect={setQuery} />
+      ) : (
         <EmptyState
           title="Search GitHub"
           subtitle="Try “react-native”, “tanstack query”, or your own username."
@@ -82,13 +103,11 @@ export function SearchScreen() {
       );
     }
     if (search.isError) {
-      const err = search.error as {name?: string; message?: string} | null;
-      const isRateLimit = err?.name === 'RateLimitError';
       return (
         <ErrorState
-          title={isRateLimit ? 'Rate limit reached' : 'Something went wrong'}
-          message={err?.message ?? 'Please try again.'}
-          onRetry={() => search.refetch()}
+          title={isRateLimitError(search.error) ? 'Rate limit reached' : 'Something went wrong'}
+          message={toUserMessage(search.error)}
+          onRetry={handleRetry}
         />
       );
     }

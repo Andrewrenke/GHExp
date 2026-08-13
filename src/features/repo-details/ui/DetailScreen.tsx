@@ -1,16 +1,18 @@
 import React, {useCallback, useMemo} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Image} from 'expo-image';
+import Octicons from '@expo/vector-icons/Octicons';
 import * as Linking from 'expo-linking';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useRepositoryDetail} from '@/features/repo-details/api/useRepositoryDetail';
+import {isRateLimitError, toUserMessage} from '@/shared/api/errors';
 import {ErrorState} from '@/shared/ui/ErrorState';
 import {RepositoryCardSkeleton} from '@/shared/ui/Skeleton';
 import {useTheme} from '@/shared/theme/ThemeProvider';
 import type {Palette} from '@/shared/theme/palette';
 import {formatCount, formatRelative} from '@/shared/lib/formatters';
-import type {RootStackParamList} from '@/app/navigation/types';
+import type {RootStackParamList} from '@/shared/navigation/types';
 import {useFavoritesStore} from '@/shared/store/useFavoritesStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Detail'>;
@@ -25,9 +27,23 @@ export function DetailScreen({route}: Props) {
   const isFavorite = useFavoritesStore(s => s.favorites.includes(fullName));
   const toggleFavorite = useFavoritesStore(s => s.toggle);
 
+  // Depend on the URL string rather than the whole `data` object, which gets a
+  // new identity on every background refetch.
+  const htmlUrl = data?.html_url;
+
   const openOnGitHub = useCallback(() => {
-    if (data) Linking.openURL(data.html_url);
-  }, [data]);
+    if (!htmlUrl) return;
+    // openURL rejects when no handler is registered for the scheme (and on
+    // Android when the intent is blocked). Unhandled, that surfaces as a red
+    // box in dev and a silent unhandled rejection in production.
+    Linking.openURL(htmlUrl).catch(() => {
+      Alert.alert('Could not open link', 'No app on this device can open GitHub links.');
+    });
+  }, [htmlUrl]);
+
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   if (isPending) {
     return (
@@ -39,11 +55,11 @@ export function DetailScreen({route}: Props) {
 
   if (isError || !data) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <ErrorState
-          title="Could not load repository"
-          message={(error as Error | null)?.message}
-          onRetry={() => refetch()}
+          title={isRateLimitError(error) ? 'Rate limit reached' : 'Could not load repository'}
+          message={toUserMessage(error)}
+          onRetry={handleRetry}
         />
       </SafeAreaView>
     );
@@ -70,24 +86,51 @@ export function DetailScreen({route}: Props) {
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
-            <Text style={[styles.favIcon, {color: isFavorite ? colors.star : colors.textMuted}]}>
-              {isFavorite ? '★' : '☆'}
-            </Text>
+            <Octicons
+              name={isFavorite ? 'star-fill' : 'star'}
+              size={24}
+              color={isFavorite ? colors.star : colors.textMuted}
+              accessible={false}
+            />
           </Pressable>
         </View>
 
         {data.description ? <Text style={styles.description}>{data.description}</Text> : null}
 
         <View style={styles.statsRow}>
-          <Stat label="Stars" value={formatCount(data.stargazers_count)} styles={styles} />
-          <Stat label="Forks" value={formatCount(data.forks_count)} styles={styles} />
-          <Stat label="Issues" value={formatCount(data.open_issues_count)} styles={styles} />
+          <Stat
+            icon="star-fill"
+            label="Stars"
+            value={formatCount(data.stargazers_count)}
+            styles={styles}
+            colors={colors}
+          />
+          <Stat
+            icon="repo-forked"
+            label="Forks"
+            value={formatCount(data.forks_count)}
+            styles={styles}
+            colors={colors}
+          />
+          <Stat
+            icon="issue-opened"
+            label="Issues"
+            value={formatCount(data.open_issues_count)}
+            styles={styles}
+            colors={colors}
+          />
         </View>
 
         <View style={styles.metaBlock}>
-          {data.language ? <MetaRow label="Language" value={data.language} styles={styles} /> : null}
-          {data.license?.name ? <MetaRow label="License" value={data.license.name} styles={styles} /> : null}
-          {data.default_branch ? <MetaRow label="Default branch" value={data.default_branch} styles={styles} /> : null}
+          {data.language ? (
+            <MetaRow label="Language" value={data.language} styles={styles} />
+          ) : null}
+          {data.license?.name ? (
+            <MetaRow label="License" value={data.license.name} styles={styles} />
+          ) : null}
+          {data.default_branch ? (
+            <MetaRow label="Default branch" value={data.default_branch} styles={styles} />
+          ) : null}
           <MetaRow label="Updated" value={formatRelative(data.updated_at)} styles={styles} />
         </View>
 
@@ -106,6 +149,7 @@ export function DetailScreen({route}: Props) {
           accessibilityRole="button"
           accessibilityLabel={`Open ${data.full_name} on GitHub`}
           style={({pressed}) => [styles.button, pressed && styles.buttonPressed]}>
+          <Octicons name="mark-github" size={18} color="#ffffff" accessible={false} />
           <Text style={styles.buttonText}>Open on GitHub</Text>
         </Pressable>
       </ScrollView>
@@ -116,16 +160,23 @@ export function DetailScreen({route}: Props) {
 type StylesShape = ReturnType<typeof makeStyles>;
 
 const Stat = React.memo(function StatImpl({
+  icon,
   label,
   value,
   styles,
+  colors,
 }: {
+  icon: React.ComponentProps<typeof Octicons>['name'];
   label: string;
   value: string;
   styles: StylesShape;
+  colors: Palette;
 }) {
   return (
-    <View style={styles.stat}>
+    // Grouped so a screen reader announces "1.4K Stars" as one unit instead of
+    // reading a bare number and its label as two disconnected fragments.
+    <View style={styles.stat} accessible accessibilityLabel={`${value} ${label}`}>
+      <Octicons name={icon} size={14} color={colors.textMuted} accessible={false} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -158,7 +209,6 @@ function makeStyles(colors: Palette) {
     headerText: {flex: 1, minWidth: 0},
     owner: {fontSize: 13, color: colors.textMuted},
     name: {fontSize: 20, fontWeight: '700', color: colors.text},
-    favIcon: {fontSize: 28, lineHeight: 32},
     description: {fontSize: 14, lineHeight: 20, color: colors.text},
     statsRow: {
       flexDirection: 'row',
@@ -167,7 +217,7 @@ function makeStyles(colors: Palette) {
       borderRadius: 8,
       backgroundColor: colors.surface,
     },
-    stat: {flex: 1, alignItems: 'center'},
+    stat: {flex: 1, alignItems: 'center', gap: 2},
     statValue: {fontSize: 18, fontWeight: '700', color: colors.text},
     statLabel: {marginTop: 2, fontSize: 12, color: colors.textMuted},
     metaBlock: {gap: 6},
@@ -188,7 +238,10 @@ function makeStyles(colors: Palette) {
       paddingVertical: 12,
       borderRadius: 8,
       backgroundColor: colors.accent,
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
     },
     buttonPressed: {opacity: 0.7},
     buttonText: {color: '#fff', fontWeight: '600', fontSize: 15},

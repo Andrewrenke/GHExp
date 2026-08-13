@@ -11,7 +11,12 @@ type Props = {
 
 // Skeletons > spinners on first paint because they hint at layout;
 // the eventual content lands without a visible reflow.
-export const Skeleton = React.memo(function SkeletonImpl({height, width, radius = 4, style}: Props) {
+export const Skeleton = React.memo(function SkeletonImpl({
+  height,
+  width,
+  radius = 4,
+  style,
+}: Props) {
   const opacity = useRef(new Animated.Value(0.4)).current;
   const {colors} = useTheme();
 

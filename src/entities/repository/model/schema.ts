@@ -5,10 +5,10 @@ import {z} from 'zod';
 // page lean in memory and forces us to notice when a field we depend on
 // is missing at the boundary rather than deep inside a component.
 
-export const ownerSchema = z.object({
+const ownerSchema = z.object({
   login: z.string(),
-  avatar_url: z.string().url(),
-  html_url: z.string().url(),
+  avatar_url: z.url(),
+  html_url: z.url(),
 });
 
 export const repositorySchema = z.object({
@@ -22,7 +22,7 @@ export const repositorySchema = z.object({
   // GitHub returns `language: null` for repos with no detectable language.
   language: z.string().nullable(),
   updated_at: z.string(),
-  html_url: z.string().url(),
+  html_url: z.url(),
   owner: ownerSchema,
 });
 
@@ -47,7 +47,6 @@ export const repositoryDetailSchema = repositorySchema.extend({
   default_branch: z.string().optional(),
 });
 
-export type Owner = z.infer<typeof ownerSchema>;
 export type Repository = z.infer<typeof repositorySchema>;
 export type RepositoryDetail = z.infer<typeof repositoryDetailSchema>;
 export type SearchResponse = z.infer<typeof searchResponseSchema>;
