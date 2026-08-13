@@ -1,9 +1,8 @@
 import {useInfiniteQuery} from '@tanstack/react-query';
 import {requestJson} from '@/shared/api/client';
-import {
-  searchResponseSchema,
-  type SearchResponse,
-} from '@/entities/repository/model/schema';
+import {isRateLimitError, isSchemaError} from '@/shared/api/errors';
+import {queryKeys} from '@/shared/api/queryKeys';
+import {searchResponseSchema, type SearchResponse} from '@/entities/repository/model/schema';
 
 const PER_PAGE = 100; // assignment specifies per_page=100
 
@@ -11,7 +10,7 @@ const PER_PAGE = 100; // assignment specifies per_page=100
 // 11 returns HTTP 422 with a "only the first 1000 results are available"
 // message. Stopping pagination explicitly here means the UI never sees
 // that error at all — clean footer, no surprise crash at the boundary.
-export const SEARCH_MAX_RESULTS = 1000;
+const SEARCH_MAX_RESULTS = 1000;
 export const SEARCH_MAX_PAGES = Math.ceil(SEARCH_MAX_RESULTS / PER_PAGE);
 
 // Exported for direct unit testing — hooks are awkward to test for pure
@@ -34,7 +33,7 @@ export function getNextSearchPage(
 export function useRepositorySearch(query: string) {
   const trimmed = query.trim();
   return useInfiniteQuery({
-    queryKey: ['repositories', trimmed],
+    queryKey: queryKeys.repositories.search(trimmed),
     queryFn: ({pageParam, signal}) =>
       requestJson(
         `/search/repositories?q=${encodeURIComponent(trimmed)}` +
@@ -49,10 +48,10 @@ export function useRepositorySearch(query: string) {
     // fresh across re-focus avoids re-hitting a rate-limited endpoint.
     staleTime: 5 * 60_000,
     // Retry once on transient errors, but never on a rate limit —
-    // retrying a 403 just wastes the remaining quota.
+    // retrying a 403 just wastes the remaining quota. A schema failure is
+    // deterministic, so retrying it just fails again more slowly.
     retry: (failureCount, err) => {
-      const name = (err as {name?: string} | null)?.name;
-      if (name === 'RateLimitError' || name === 'SchemaError') {
+      if (isRateLimitError(err) || isSchemaError(err)) {
         return false;
       }
       return failureCount < 1;
