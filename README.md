@@ -127,15 +127,23 @@ Run `npm run verify` (typecheck → lint → tests) for the whole gate in one co
   appears with connectivity disabled, and light/dark both render correctly on
   cold start and on a live system theme switch. The rate-limit path was
   verified against a genuine GitHub 403, not a mock.
-- ✅ **iOS compiles** — `xcodebuild ... -sdk iphonesimulator` reports
-  `BUILD SUCCEEDED` with zero errors under Xcode 26.6, with `NitroMmkv` /
-  `MMKVCore` linked via CocoaPods.
-- ✅ **Cold start and memory measured on a release build** — 952 ms median cold
-  start, 141 MB PSS with 100 cards loaded. Raw output in `docs/perf/metrics.md`.
-- ⚠️ **Frame timing measured but emulator-bound:** 27–30 ms median frame
-  (~35 FPS), 18–24 % janky over two runs. Not 60 FPS. A virtualised GPU is
-  partly responsible and a physical device is needed to apportion the blame.
-- ⚠️ **No release APK is attached to this repo yet.** One builds locally with
+- ✅ **Runtime verified on iOS** — Release build on a physical iPhone 15 Pro
+  (iOS 18.7.8) and on an iPhone 17 Pro simulator. Launches, renders, and
+  restores persisted MMKV state.
+- ✅ **Performance measured on real hardware** — 952 ms median cold start and
+  141 MB PSS on a release Android build; 3.6 ms/s hitch ratio and 79 FPS median
+  on the iPhone. Raw output and reproduction commands in
+  [`docs/perf/metrics.md`](docs/perf/metrics.md).
+- ✅ **iOS packaging bug found and fixed** — the device build shipped without
+  `React.framework` and crashed at launch. React Native is now compiled from
+  source; `otool -L` confirms the dependency is gone entirely.
+- ⚠️ **The iOS fix is verified on the simulator, not on a device.** The iPhone
+  used for the measurements has Developer Mode disabled, so a device build
+  could not be produced after the change.
+- ⚠️ **Android frame timing is emulator-bound** and should be disregarded:
+  27–30 ms median frame, 18–24 % janky. The iPhone numbers above are the
+  trustworthy ones — see "Performance" for why.
+- ⚠️ **No release APK attached to this repo.** It builds locally with
   `cd android && ./gradlew assembleRelease` (89 MB universal APK, debug-signed).
 
 ---
@@ -515,14 +523,12 @@ The optimizations already in the code:
   page 10 explicitly (the API would otherwise 422).
 - **No E2E tests** — Maestro / Detox would take more than the time budget
   allows.
-- **The iOS device build omits `React.framework`** and crashes on launch until
-  it is embedded by hand. Durable fix (compile RN from source via
-  `expo-build-properties`) is identified but not yet applied — see
-  `docs/perf/metrics.md` §5.
-- **iOS scroll is measured and healthy:** 3.6 ms/s hitch ratio (Apple's
-  guidance is < 5 ms/s), 79 FPS median on a 120 Hz panel.
-- **Frame timing unmeasured** — cold start and memory are real numbers now, but
-  FPS/jank needs a physical device; the emulator here was RAM-starved.
+- **Building React Native from source makes the first iOS build slow.** That is
+  the price of the `React.framework` fix — see `docs/perf/metrics.md` §5.
+- **The iOS fix is unverified on a physical device** (simulator only), because
+  Developer Mode was disabled on the available iPhone.
+- **Android frame timing could not be measured credibly.** The emulator was
+  RAM-starved; the iPhone hitch numbers are the ones to trust.
 - **Expo Go no longer works** — MMKV is a native module, so a dev build is
   required (`npx expo run:android` / `run:ios`).
 - **Not internationalized.** Every string is hard-coded in English; there is no
